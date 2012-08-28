@@ -38,7 +38,7 @@ path = "bilder/64/"
 
 imgFloor = pygame.image.load( path + "grass_0.png")
 imgWood = pygame.image.load( path + "forrest.png")
-imgEnemy = pygame.image.load( path + "monster.png")
+imgEnemyW = pygame.image.load( path + "monster.png")
 imgEnemyAL = pygame.image.load( path + "monster_s1.png")
 imgEnemyAR = pygame.image.load( path + "monster_s5.png")
 
@@ -61,6 +61,7 @@ imgBubbleR = pygame.image.load(path + "bubble_r.png")
 hasSword =  False
 enemyNear = False
 lives = True
+lookleft = True
 
 imgPlayer = imgPlayerR
 
@@ -93,44 +94,96 @@ while run:
         if time >  msgtimer + msgtime:
                 msg = ""
 
-
+        #check if enemy is near
+        if enemyPos[0] == playerPos[0] and enemyPos[1] == playerPos[1]+1:
+                enemyNear = True
+        elif enemyPos[0] == playerPos[0] and enemyPos[1] == playerPos[1]-1:
+                enemyiNear = True
+        elif enemyPos[1] == playerPos[1] and enemyPos[0] == playerPos[0]+1:
+                enemyNear = True
+                lookleft = False
+        elif enemyPos[1] == playerPos[1] and enemyPos[0] == playerPos[0]-1:
+                enemyNear = True
+                lookleft = True
+        elif enemyPos[0] == playerPos[0]+1 and enemyPos[1] == playerPos[1]+1 \
+                or enemyPos[0] == playerPos[0]+1 and enemyPos[1] == playerPos[1]-1 \
+                or enemyPos[0] == playerPos[0]-1 and enemyPos[1] == playerPos[1]+1 \
+                or enemyPos[0] == playerPos[0]-1 and enemyPos[1] == playerPos[1]-1:
+                        enemyNear = True
+        elif enemyNear:
+                enemyNear = False
+                print "no enemies nearby"
+        
 	#Welt aufbauen
+        #grass
 	for x in range(0, width_field + 1):
 		for y in range(0, height_field + 1):
 			#print floor
 			screen.blit(imgFloor, (x*fieldsize,y*fieldsize))
+
+        #forrest, river later
+
+
+
         #message
         if msg != "": #don't blit empty messages        
                 msgtext = msgfont.render(msg, True, (178,0,0),)
                 screen.blit(imgBubbleL, ((playerPos[0]-0.5)*fieldsize, (playerPos[1]-0.5)*fieldsize))
                 screen.blit(msgtext, ((playerPos[0]-0.4)*fieldsize, (playerPos[1]-0.35)*fieldsize))
 
-
 	#sword
 	screen.blit(imgSword, (swordPos[0]*fieldsize, swordPos[1]*fieldsize))
 	
-	#enemy
+	#paint enemy according to player position
+        if enemyNear and lives:
+                if playerPos[0] > enemyPos[0]:
+                        imgEnemy = imgEnemyAR
+                else:
+                        imgEnemy = imgEnemyAL
+        else:
+                imgEnemy = imgEnemyW
 	screen.blit(imgEnemy, (enemyPos[0]*fieldsize, enemyPos[1]*fieldsize))
+
 
         #blood        
         screen.blit(imgBlood, (lastDead[0]*fieldsize,lastDead[1]*fieldsize))
 
-        #paint player according to action
-        if lives:
-                screen.blit(imgPlayer, (playerPos[0]*fieldsize, playerPos[1]*fieldsize))
-        else:
-                screen.blit(imgPlayerDead, (playerPos[0]*fieldsize, playerPos[1]*fieldsize))
-
-	#alte position speichern
-	playerPosOld[0] = playerPos[0]
+        #alte position speichern
+        playerPosOld[0] = playerPos[0]
         playerPosOld[1] = playerPos[1]
 
-        #check if enemy is near
-        if enemyPos[0] == playerPos[0] and enemyPos[1] == playerPos[1]+1 or enemyPos[1] == playerPos[1]-1:
-                        enemyNear = True
+        #paint player according to action        
+        if enemyNear:
+                if hasSword:
+                        if lookleft:
+                                imgPlayer = imgPlayerSLA
+                        else:
+                                imgPlayer = imgPlayerSRA
+                else:
+                        if lookleft:
+                                imgPlayer = imgPlayerL
+                        else:
+                                imgPlayer = imgPlayerR
+        else:
+                if hasSword:
+                        if lookleft:
+                                imgPlayer = imgPlayerSL
+                        else:
+                                imgPlayer = imgPlayerSR
+                else:
+                        if lookleft:
+                                imgPlayer = imgPlayerL
+                        else:
+                                imgPlayer = imgPlayerR
+        
+        #hey, we are dead
+        if not lives:
+                imgPlayer = imgPlayerDead
 
+        #paint player according to action
+        screen.blit(imgPlayer, (playerPos[0]*fieldsize, playerPos[1]*fieldsize))
 
-        for event in pygame.event.get():
+        for event in pygame.event.get():                
                 if event.type == pygame.QUIT:
                         run = False
                         break
@@ -138,32 +191,21 @@ while run:
 
 	        #tasten abfragen
         	if event.type == pygame.KEYDOWN and lives:
+                        
 	        	if event.key == pygame.K_UP and playerPos[1] > 0:
 		        	#up
 			        playerPos[1] -= 1
         		elif event.key == pygame.K_LEFT and playerPos[0] > 0:
 	        		#left
-		        	if hasSword:
-                                        if enemyNear:
-                                                imgPlayer = imgPlayerSLA
-                                        else:
-                                                imgPlayer = imgPlayerSL
-        			else:
-	        			imgPlayer = imgPlayerL
 		        	playerPos[0] -= 1
+                                lookleft  = True
         		elif event.key == pygame.K_DOWN and playerPos[1] < height_field - 1:
 	        		#down
         			playerPos[1] += 1
 	        	elif event.key == pygame.K_RIGHT and playerPos[0] < width_field - 1:
 		        	#right
-			        if hasSword:
-                                        if enemyNear:
-                                                imgPlayer = imgPlayerSRA
-                                        else:
-                                                imgPlayer = imgPlayerSR
-        			else:
-	        			imgPlayer = imgPlayerR
 		        	playerPos[0] += 1
+                                lookleft = False
         		elif event.key == pygame.K_i:
 	        		#inventar
 		        	print(env)
@@ -185,47 +227,39 @@ while run:
                                 msgtime = time
 
         			hasSword = False
-	        	elif event.key == pygame.K_a and "Sword" in inv and playerPos == enemyPos:
+	        	elif event.key == pygame.K_a and "Sword" in inv and enemyNear:
 		        	lastDead = enemyPos
                                 enemyPos = (-1,-1)
                                 msg = "Stiiiirb!"
                                 msgtime = time
-	        		print("Zombie besiegt")
-
 		        	enemyPos = [randint(0, width_field-1), randint(0, height_field-1) ]			
         		elif event.key == pygame.K_ESCAPE:
-	        		#verlassen
+	        		#quit game
                                 run = False
         			break
         	else:
 	        	continue
 
-	#schwertkollision prüfen
+	#found sword
 	if playerPos == swordPos:
-                msg = "Ein Schwert"
+                msg = "HEHE!"
 		msgtime = time
-                print("Du hast das Schwert")
 		swordPos = (-1,-1)
 		inv.append("Sword")
 		hasSword = True
 
-	#ohne schwert angreifen??
-	if not "Sword" in inv and playerPos == enemyPos:
+	# hit Monster?
+	if playerPos == enemyPos:
                 msg = "Aua"
                 msgtime = time                
-		print("Aua, nüsch haun")
-
-		#leben abziehen
 		energy -= 1
-		#zurück auf letztes feld
 		playerPos[0] = playerPosOld[0]
                 playerPos[1] = playerPosOld[1]
 	
 	#quit if dead
-	if lives == 0:
+	if energy == 0:
                 msg = "R.I.P"
                 msgtime = time
-		print ("aaaaaaaaaargh")
 		lives = False
         pygame.display.update();
         clock.tick(100)
