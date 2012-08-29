@@ -40,6 +40,9 @@ clock = pygame.time.Clock()
 pygame.mouse.set_cursor(*pygame.cursors.diamond)
 pygame.key.set_repeat(100, 200)     #keyboard multiply strokerate
 
+
+hitChance = 40	#chance to hit of 100
+
 #status
 inv = []
 energy = 3 #hitpoints to start
@@ -57,6 +60,7 @@ height_field = screeny/fieldsize
 
 #load images
 #enviroment
+imgStatusbar = pygame.image.load( imgPath + "statusbar.png")
 imgFloor = pygame.image.load( imgPath + "grass_0.png")
 imgWood = pygame.image.load( imgPath + "forrest.png")
 
@@ -80,7 +84,7 @@ imgPlayer = imgPlayerR
 imgGold = pygame.image.load(imgPath + "gold_0.png")
 imgSword = pygame.image.load(imgPath + "sword.png")
 imgBlood = pygame.image.load(imgPath + "blood_0.png")
-
+imgArmor = pygame.image.load(imgPath + "armor_01.png")
 #talk
 imgBubbleL = pygame.image.load(imgPath + "bubble_l.png")
 imgBubbleR = pygame.image.load(imgPath + "bubble_r.png")
@@ -92,46 +96,54 @@ imgBubble = imgBubbleL
 #init sound: 48000 Hz, 2 ch, s16le
 pygame.mixer.init(frequency=48000, size=-16, channels=2, buffer=4096)
 
-sndEnemyDie = pygame.mixer.Sound(sndPath + "enemy_die.wav")             #
-sndPlayerDie = pygame.mixer.Sound(sndPath + "player_die.wav")            #
-sndSwordAHit = pygame.mixer.Sound(sndPath + "sword_attack_hit.wav")      #
-sndSwordPull = pygame.mixer.Sound(sndPath + "sword_pull.wav")            #
-sndSwordADef = pygame.mixer.Sound(sndPath + "sword_attack_def.wav")      #
-sndClubA = pygame.mixer.Sound(sndPath + "enemy_attack_club.wav")      # smokebomb99  cc 0 License
-sndSwordAMiss = pygame.mixer.Sound(sndPath + "sword_attack_miss.wav")     #
-sndSwordPush = pygame.mixer.Sound(sndPath + "sword_push.wav")            # jobro cc Attribution License
-sndWalkGrass = pygame.mixer.Sound(sndPath + "walk_grass.wav")            # bevangoldswain cc sampling+license
-sndGoldAdd = pygame.mixer.Sound(sndPath + "gold_add.wav")              # dobroide cc Attribution License.
-
+sndEnemyDie = pygame.mixer.Sound(sndPath + "enemy_die.wav")		#
+sndPlayerDie = pygame.mixer.Sound(sndPath + "player_die.wav")		# 
+sndSwordAHit = pygame.mixer.Sound(sndPath + "sword_attack_hit.wav")	# JoelAudio		cc Attribution License
+sndSwordPull = pygame.mixer.Sound(sndPath + "sword_pull.wav")		# jobro			cc Attribution License
+sndSwordADef = pygame.mixer.Sound(sndPath + "sword_attack_def.wav")	# Erdie			cc Attribution License
+sndClubAMiss = pygame.mixer.Sound(sndPath + "enemy_attack_club_miss.wav")# smokebomb99		cc 0 License
+sndClubAHit  = pygame.mixer.Sound(sndPath + "enemy_attack_club_hit.wav")# Rock Savage		cc sampling+license
+sndSwordAMiss = pygame.mixer.Sound(sndPath + "sword_attack_miss.wav")	# qubodup		cc 0 License
+sndSwordPush = pygame.mixer.Sound(sndPath + "sword_push.wav")		# jobro 		cc Attribution License
+sndWalkGrass = pygame.mixer.Sound(sndPath + "walk_grass.wav")		# bevangoldswain	cc sampling+license
+sndGoldAdd = pygame.mixer.Sound(sndPath + "gold_add.wav")		# dobroide		cc Attribution License.
+sndFoundItem = pygame.mixer.Sound(sndPath + "found_item.wav")		# Kastenfrosch		cc 0 License
 
 sndWalkGrass.set_volume(0.1)
 
 #status
 hasSword =  False
+hasSwordReady = False
 enemyNear = False
 isAlive = True
 lookleft = True
+leftbubble = True
 
 #calculate positions
-playerPos = [int(width_field/2), 0]
+playerPos = [int(width_field/2), 1]
 playerPosOld = [playerPos[0], playerPos[1]]
-swordPos = [randint(0, width_field-1), randint(0, height_field-1) ]
-enemyPos = [randint(0, width_field-1), randint(0, height_field-1) ]
+swordPos = [randint(0, width_field-1), randint(1, height_field-1) ]
+armorPos = [randint(0, width_field-1), randint(1, height_field-1) ]
+enemyPos = [randint(0, width_field-1), randint(1, height_field-1) ]
 goldPos = []
 for i in range(5):
-        goldPos.append([randint(0, width_field-1), randint(0, height_field-1)])
+        goldPos.append([randint(0, width_field-1), randint(1, height_field-1)])
 
 #dead
 lastDead = (-1,-1)
 killtime = 0
 killtimer = 2500
 
+#text/font
 #messagestuff
 msgfont = pygame.font.Font(None, 15)
 time = 0
 msgtimer = 1400
 msgtime = 0
 msg = ""
+
+#statusbar
+statusfont = pygame.font.Font(None, 16)
 
 
 print "gold at:"
@@ -145,6 +157,22 @@ run = True
 while run:
 
         time += clock.get_time()
+
+	#status text
+	st_energy_txt = str(energy)
+	st_armor_txt = str(armor)        
+	st_gold_txt = str(gold)
+	st_skill_txt = str(skill*10)
+	st_day_txt = str(time/1000/60)
+	st_pos_txt = str(playerPos[0]) + ", " + str(playerPos[1])
+
+	st_energy = statusfont.render(st_energy_txt, True, (200,200,0))
+	st_armor  = statusfont.render(st_armor_txt, True, (200,200,0))	
+	st_gold   = statusfont.render(st_gold_txt, True, (200,200,0))	
+	st_skill  = statusfont.render(st_skill_txt, True, (200,200,0))
+	st_day    = statusfont.render(st_day_txt, True, (200,200,0))
+	st_pos    = statusfont.render(st_pos_txt, True, (200,200,0))	
+
         #reset message after msgtime ticks
         if time >  msgtimer + msgtime:
                 msg = ""
@@ -169,10 +197,20 @@ while run:
                 enemyNear = False
         
 	#Welt aufbauen
+	screen.blit(imgStatusbar, (0,0))
+
+	screen.blit(st_energy, (125, 15))
+	screen.blit(st_armor, (125, 40))
+
+	screen.blit(st_skill, (470, 15))
+	screen.blit(st_pos, (470, 40))
+
+	screen.blit(st_day, (810, 15))
+	screen.blit(st_gold, (810, 40))
+
         #grass
 	for x in range(0, width_field + 1):
-		for y in range(0, height_field + 1):
-			#print floor
+		for y in range(1, height_field + 1):
 			screen.blit(imgFloor, (x*fieldsize,y*fieldsize))
 
         #forrest, river later
@@ -182,7 +220,16 @@ while run:
         #message
         if msg != "": #don't blit empty messages        
                 msgtext = msgfont.render(msg, True, (178,0,0),)
-                if lookleft:
+		if lookleft:
+			leftbubble = True
+		else:
+			leftbubble = False
+		if lookleft and playerPos[0] < 1:
+			leftbubble = False
+		if not lookleft and playerPos[0] > width_field-2:
+			leftbubble = True
+
+                if leftbubble:
                         imgBubble = imgBubbleL
                         msgPos = ((playerPos[0]-0.5)*fieldsize, (playerPos[1]-0.5)*fieldsize)
                         txtPos = ((playerPos[0]-0.35)*fieldsize, (playerPos[1]-0.25)*fieldsize)
@@ -195,7 +242,10 @@ while run:
 
 	#sword
 	screen.blit(imgSword, (swordPos[0]*fieldsize, swordPos[1]*fieldsize))
-	
+
+        #armor
+	screen.blit(imgArmor, (armorPos[0]*fieldsize, armorPos[1]*fieldsize))
+
 	#paint enemy according to player position
         if enemyNear and isAlive:
                 #prepare to attack
@@ -225,7 +275,9 @@ while run:
         #paint player according to action        
         if enemyNear:
                 if hasSword:
-                        #sndSwordPull.play()
+			if not hasSwordReady:
+	                        sndSwordPull.play()
+				hasSwordReady = True
                         if lookleft:
                                 imgPlayer = imgPlayerSLA
                         else:
@@ -237,7 +289,9 @@ while run:
                                 imgPlayer = imgPlayerR
         else:
                 if hasSword:
-                        #sndSwordPush.play()
+			if hasSwordReady:
+                        	sndSwordPush.play()
+				hasSwordReady = False
                         if lookleft:
                                 imgPlayer = imgPlayerSL
                         else:
@@ -254,6 +308,9 @@ while run:
                         imgPlayer = imgPlayerDeadL
                 else:
                         imgPlayer = imgPlayerDeadR
+		sndPlayerDie.set_volume(0.5)
+                sndPlayerDie.fadeout(1000)
+                sndPlayerDie.play()
                 pygame.time.delay(2000)
                 run = False
 
@@ -280,7 +337,7 @@ while run:
                         break
                 #check for key press
         	if event.type == pygame.KEYDOWN and isAlive:
-	        	if event.key == pygame.K_UP and playerPos[1] > 0:
+	        	if event.key == pygame.K_UP and playerPos[1] > 1:
 		        	#up
 			        playerPos[1] -= 1
                                 sndWalkGrass.play()                                
@@ -321,15 +378,22 @@ while run:
         			hasSword = False
                         elif event.key == pygame.K_a and "Sword" in inv:
                                 if enemyNear:
-                                        sndSwordAHit.play()
-                                        pygame.time.delay(300)
-		        	        lastDead = enemyPos
-                                        enemyPos = (-1,-1)
-                                        msg = "Stiiiirb!"
-                                        sndEnemyDie.play()
-                                        killtime = msgtime = time
-		        	        enemyPos = [randint(0, width_field-1), randint(0, height_field-1) ]
-                                else:
+					#hit or miss?
+					if randint(0, 100) < hitChance + skill:
+						sndSwordAHit.play()
+	                                        pygame.time.delay(300)
+			        	        lastDead = enemyPos
+                	                        enemyPos = (-1,-1)
+						skill += 0.1
+                        	                msg = "Stiiiirb!"
+                                	        sndEnemyDie.play()
+                                        	killtime = msgtime = time
+			        	        enemyPos = [randint(0, width_field-1), randint(1, height_field-1) ]
+                                	else:
+						sndSwordADef.play()
+						pygame.time.delay(300)
+
+				else:
                                         sndSwordAMiss.play()
         		elif event.key == pygame.K_ESCAPE:
 	        		#quit game
@@ -343,6 +407,7 @@ while run:
                 msg = "HEHE!"
 		msgtime = time
 		swordPos = (-1,-1)
+		sndFoundItem.play()
 		inv.append("Sword")
 		hasSword = True
 
@@ -350,18 +415,31 @@ while run:
                 msg = "Money!"
                 msgtime = time
                 gold += 1                
-                print "$$$ collected"
                 sndGoldAdd.play()
                 goldPos.remove(playerPos)
-                print goldPos                
+	#found armor
+	if playerPos == armorPos:
+		msg = "Cool Shirt"
+		msgtime = time
+		armorPos = (-1,-1)
+		sndFoundItem.play()
+		inv.append("Armor")
+		armor += 5
 
 	# hit Monster?
 	if playerPos == enemyPos:
                 if energy > 0:
-                        msg = "Aua"                
-                        msgtime = time             
-		        energy -= 1
-                        sndClubA.play()
+			if randint(0, 100) < hitChance - armor:
+				sndClubAHit.play()
+        	                msg = "Aua"                
+                	        msgtime = time             
+		        	energy -= 1
+				if armor >= 0.05:
+					armor -= 0.05
+			else:
+	                        sndClubAMiss.play()
+				if armor >= 0.1:
+					armor -= 0.1
                 else:
                         energy = 0
                         msg = "R.I.P"
@@ -373,6 +451,10 @@ while run:
 	        playerPos[0] = playerPosOld[0]
                 playerPos[1] = playerPosOld[1]
 	
+	if armor <= 0 and "Armor" in inv :
+		armor = 0
+		inv.remove("Armor")
+
         pygame.display.update();
         clock.tick(60)
 exit(0)
