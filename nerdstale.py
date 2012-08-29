@@ -234,9 +234,8 @@ while run:
 	screen.blit(st_pos, (470, 40))
 	screen.blit(st_day, (810, 15))
 	screen.blit(st_gold, (810, 40))
-
+        
         #blit floor
-
 	for x in range(0, width_field + 1):
 		starty = 1		
 		if scale < 2:
@@ -354,14 +353,13 @@ while run:
 		smoothMove = True		
 		if playerMove[0] < playerPos[0]:
 			playerMove[0] += 1/float(fieldsize/2)
-			print playerMove[0]
 		elif playerMove[0] > playerPos[0]:
 			playerMove[0] -= 1/float(fieldsize/2)
 		if playerMove[1] < playerPos[1]:
 			playerMove[1] += 1/float(fieldsize/2)
 		elif playerMove[1] > playerPos[1]:
 			playerMove[1] -= 1/float(fieldsize/2)
-		pygame.time.delay(5)
+		pygame.time.delay(2)
 	else:
 		smoothMove = False
 
@@ -397,7 +395,6 @@ while run:
 				playerPosOld[0] = playerPos[0]				
 		        	playerPos[0] += 1
                                 sndWalkGrass.play()
-				print playerMove[0], playerPosOld[0], playerPos[0]
                                 lookleft = False
         		elif event.key == pygame.K_i:
 	        		#inventar
