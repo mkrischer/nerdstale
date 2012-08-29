@@ -28,8 +28,10 @@ if not pygame.font: print 'Warning, fonts disabled'
 
 
 pygame.init()
-screenx = 1024
-screeny = 768
+
+scale = 2 #factor of 32 (only 2 working right now, grapics for 1 and 4 are there
+screenx = 512*scale
+screeny = 396*scale
 size = [screenx, screeny]
 
 screen = pygame.display.set_mode((screenx,screeny))
@@ -52,17 +54,23 @@ level = 0
 skill = 0.1
 
 #enviroment
-imgPath = "bilder/64/"
+imgPath = "bilder/"+ str(32 * scale) + "/"
 sndPath = "sound/"
-fieldsize = 64
+fieldsize = 32*scale
 width_field = screenx/fieldsize
 height_field = screeny/fieldsize
+starty = 1
+if scale < 2:
+	starty += (2-scale)
+if scale > 2:
+	starty -= (2-scale)
+
 
 #load images
 #enviroment
 imgStatusbar = pygame.image.load( imgPath + "statusbar.png")
-imgFloor = pygame.image.load( imgPath + "grass_0.png")
-imgWood = pygame.image.load( imgPath + "forrest.png")
+imgGrass = pygame.image.load( imgPath + "grass_0.png")
+imgForrest = pygame.image.load( imgPath + "forrest.png")
 
 #enemy
 imgEnemyW = pygame.image.load( imgPath + "monster.png")
@@ -85,6 +93,10 @@ imgGold = pygame.image.load(imgPath + "gold_0.png")
 imgSword = pygame.image.load(imgPath + "sword.png")
 imgBlood = pygame.image.load(imgPath + "blood_0.png")
 imgArmor = pygame.image.load(imgPath + "armor_01.png")
+imgBottleBlue = pygame.image.load(imgPath + "bottle_blue.png")
+imgBottleRed = pygame.image.load(imgPath + "bottle_red.png")
+imgBottleEmpty = pygame.image.load(imgPath + "bottle_empty.png")
+imgBottle = imgBottleBlue
 #talk
 imgBubbleL = pygame.image.load(imgPath + "bubble_l.png")
 imgBubbleR = pygame.image.load(imgPath + "bubble_r.png")
@@ -108,6 +120,9 @@ sndSwordPush = pygame.mixer.Sound(sndPath + "sword_push.wav")		# jobro 		cc Attr
 sndWalkGrass = pygame.mixer.Sound(sndPath + "walk_grass.wav")		# bevangoldswain	cc sampling+license
 sndGoldAdd = pygame.mixer.Sound(sndPath + "gold_add.wav")		# dobroide		cc Attribution License.
 sndFoundItem = pygame.mixer.Sound(sndPath + "found_item.wav")		# Kastenfrosch		cc 0 License
+sndDring = pygame.mixer.Sound(sndPath + "drink.wav")			# sagetyrtle		cc 0 License
+
+pygame.mixer.music.load(sndPath + "amb_outdoor.wav")		# tsemilagain		cc sampling+license
 
 sndWalkGrass.set_volume(0.1)
 
@@ -118,16 +133,32 @@ enemyNear = False
 isAlive = True
 lookleft = True
 leftbubble = True
+smoothMove = False
+healthEmpty = False
 
 #calculate positions
-playerPos = [int(width_field/2), 1]
+playerPos = [int(width_field/2), starty]
+playerMove = [playerPos[0], playerPos[1]]
 playerPosOld = [playerPos[0], playerPos[1]]
-swordPos = [randint(0, width_field-1), randint(1, height_field-1) ]
-armorPos = [randint(0, width_field-1), randint(1, height_field-1) ]
-enemyPos = [randint(0, width_field-1), randint(1, height_field-1) ]
+swordPos = [randint(0, width_field-1), randint(starty, height_field-1) ]
+armorPos = [randint(0, width_field-1), randint(starty, height_field-1) ]
+enemyPos = [randint(0, width_field-1), randint(starty, height_field-1) ]
 goldPos = []
 for i in range(5):
-        goldPos.append([randint(0, width_field-1), randint(1, height_field-1)])
+        goldPos.append([randint(0, width_field-1), randint(starty, height_field-1)])
+
+forrestPos = []
+for i in range(width_field*scale, (height_field-1) * (width_field-1)):
+	seed = randint(0, 100)
+        if seed < 30:
+		x = i % width_field
+		y = i / width_field
+		forrestPos.append([x,y])
+
+
+healthPos = (-1,-1)
+if randint(0, 100) < 40:
+	healthPos = [randint(0, width_field-1), randint(starty, height_field-1)]
 
 #dead
 lastDead = (-1,-1)
@@ -136,7 +167,7 @@ killtimer = 2500
 
 #text/font
 #messagestuff
-msgfont = pygame.font.Font(None, 15)
+msgfont = pygame.font.Font(None, 10*scale)
 time = 0
 msgtimer = 1400
 msgtime = 0
@@ -145,15 +176,13 @@ msg = ""
 #statusbar
 statusfont = pygame.font.Font(None, 16)
 
-
-print "gold at:"
-print goldPos
-
 ##
 ## gogogo
 ##
 run = True
 #game loop
+
+pygame.mixer.music.play(-1)
 while run:
 
         time += clock.get_time()
@@ -201,20 +230,25 @@ while run:
 
 	screen.blit(st_energy, (125, 15))
 	screen.blit(st_armor, (125, 40))
-
 	screen.blit(st_skill, (470, 15))
 	screen.blit(st_pos, (470, 40))
-
 	screen.blit(st_day, (810, 15))
 	screen.blit(st_gold, (810, 40))
 
-        #grass
+        #blit floor
+
 	for x in range(0, width_field + 1):
-		for y in range(1, height_field + 1):
-			screen.blit(imgFloor, (x*fieldsize,y*fieldsize))
+		starty = 1		
+		if scale < 2:
+			starty += (2-scale)
+		for y in range(starty, height_field + 1):
+			screen.blit(imgGrass, (x*fieldsize,y*fieldsize))
 
         #forrest, river later
 
+	for x in forrestPos:
+		a,b = x
+		screen.blit(imgForrest,(a*fieldsize,b*fieldsize))
 
 
         #message
@@ -268,9 +302,10 @@ while run:
                 a,b = x
                 screen.blit(imgGold,(a*fieldsize,b*fieldsize)) 
 
+	#bottle
+	screen.blit(imgBottle,(healthPos[0]*fieldsize, healthPos[0]*fieldsize))
+
         #alte position speichern
-        playerPosOld[0] = playerPos[0]
-        playerPosOld[1] = playerPos[1]
 
         #paint player according to action        
         if enemyNear:
@@ -314,46 +349,55 @@ while run:
                 pygame.time.delay(2000)
                 run = False
 
-        #paint player according to action
-        if playerPosOld[0] != playerPos[0]:
-                i = 0
-                while i < fieldsize:
-                        screen.blit(imgPlayer, (playerPosOld[0]*fieldsize+i, playerPosOld[1]*fieldsize))
-                        pygame.time.delay(2000)
-                        i += 1
-        elif playerPosOld[1] != playerPos[1]:
-                i = 0
-                while i < fieldsize:
-                        screen.blit(imgPlayer, (playerPosOld[0]*fieldsize, playerPosOld[1]*fieldsize+i))
-                        pygame.time.delay(2000)
-                        i += 1
-        else:
-                screen.blit(imgPlayer, (playerPos[0]*fieldsize, playerPos[1]*fieldsize))
 
+	if not playerMove == playerPos:
+		smoothMove = True		
+		if playerMove[0] < playerPos[0]:
+			playerMove[0] += 1/float(fieldsize/2)
+			print playerMove[0]
+		elif playerMove[0] > playerPos[0]:
+			playerMove[0] -= 1/float(fieldsize/2)
+		if playerMove[1] < playerPos[1]:
+			playerMove[1] += 1/float(fieldsize/2)
+		elif playerMove[1] > playerPos[1]:
+			playerMove[1] -= 1/float(fieldsize/2)
+		pygame.time.delay(5)
+	else:
+		smoothMove = False
+
+	#paint player
+	screen.blit(imgPlayer, (playerMove[0]*fieldsize, playerMove[1]*fieldsize))
 
         for event in pygame.event.get():                
                 if event.type == pygame.QUIT:
                         run = False
                         break
                 #check for key press
-        	if event.type == pygame.KEYDOWN and isAlive:
+        	if event.type == pygame.KEYDOWN and isAlive and not smoothMove:
 	        	if event.key == pygame.K_UP and playerPos[1] > 1:
 		        	#up
+				playerMove[1] = playerPos[1]
+				playerPosOld[1] = playerPos[1]
 			        playerPos[1] -= 1
                                 sndWalkGrass.play()                                
         		elif event.key == pygame.K_LEFT and playerPos[0] > 0:
 	        		#left
+				playerMove[0] = playerPosOld[0] = playerPos[0]
 		        	playerPos[0] -= 1
                                 sndWalkGrass.play()
                                 lookleft  = True
         		elif event.key == pygame.K_DOWN and playerPos[1] < height_field - 1:
 	        		#down
+				playerMove[1] = playerPosOld[1] = playerPos[1]
         			playerPos[1] += 1
                                 sndWalkGrass.play()                                
 	        	elif event.key == pygame.K_RIGHT and playerPos[0] < width_field - 1:
 		        	#right
+				playerMove[0] = playerPos[0]
+				playerPosOld[0] = playerPos[0]				
 		        	playerPos[0] += 1
-                                sndWalkGrass.play()                                
+                                sndWalkGrass.play()
+				print playerMove[0], playerPosOld[0], playerPos[0]
                                 lookleft = False
         		elif event.key == pygame.K_i:
 	        		#inventar
@@ -383,7 +427,6 @@ while run:
 						sndSwordAHit.play()
 	                                        pygame.time.delay(300)
 			        	        lastDead = enemyPos
-                	                        enemyPos = (-1,-1)
 						skill += 0.1
                         	                msg = "Stiiiirb!"
                                 	        sndEnemyDie.play()
@@ -391,7 +434,8 @@ while run:
 			        	        enemyPos = [randint(0, width_field-1), randint(1, height_field-1) ]
                                 	else:
 						sndSwordADef.play()
-						pygame.time.delay(300)
+					pygame.time.delay(300)
+
 
 				else:
                                         sndSwordAMiss.play()
@@ -410,7 +454,7 @@ while run:
 		sndFoundItem.play()
 		inv.append("Sword")
 		hasSword = True
-
+	#found gold
         if playerPos in goldPos:
                 msg = "Money!"
                 msgtime = time
@@ -419,23 +463,44 @@ while run:
                 goldPos.remove(playerPos)
 	#found armor
 	if playerPos == armorPos:
-		msg = "Cool Shirt"
+		msg = "A Shirt"
 		msgtime = time
 		armorPos = (-1,-1)
 		sndFoundItem.play()
 		inv.append("Armor")
 		armor += 5
+	#found healing drink
+	if playerPos == healthPos and not healthEmpty:
+		msg = "First Aid"
+		msgtime = time
+		imgBottle = imgBottleEmpty
+		healthEmpty = True
+		energy += 3
+		if playerPos[0] == width_field - 1:
+			#cant drop right
+			if playerPos[1] == height_field - 1:
+				#cant drop down
+				healthPos = [playerPos[0], playerPos[1]-1]
+			else:
+				#drop down
+				healthPos = [playerPos[0], playerPos[1]+1]
+		else:
+			#drop right
+			healthPos = [playerPos[0]+1, playerPos[1]]
 
-	# hit Monster?
+	# hit by monster?
 	if playerPos == enemyPos:
                 if energy > 0:
-			if randint(0, 100) < hitChance - armor:
+			if randint(0, 100) < hitChance:
 				sndClubAHit.play()
         	                msg = "Aua"                
                 	        msgtime = time             
 		        	energy -= 1
 				if armor >= 0.05:
-					armor -= 0.05
+					armor -= 0.1
+					energy -= 0.2
+				else:
+					energy -= 1
 			else:
 	                        sndClubAMiss.play()
 				if armor >= 0.1:
@@ -458,4 +523,3 @@ while run:
         pygame.display.update();
         clock.tick(60)
 exit(0)
-
