@@ -66,7 +66,7 @@ size = [screenx, screeny]
 screen = pygame.display.set_mode((screenx,screeny))
 pygame.display.set_caption("A Nerd's Tale")
 pygame.mouse.set_visible(0)         #disable mouse cursor
-pygame.key.set_repeat(100, 200)     #keyboard multiply strokerate
+pygame.key.set_repeat(50, 50)     #keyboard multiply strokerate
 clock = pygame.time.Clock()
 time = 0
 #enviroment
@@ -90,6 +90,7 @@ imgGrass = pygame.image.load( imgPath + "grass_0.png")
 imgForrest = pygame.image.load( imgPath + "forrest.png")
 #enemy
 imgEnemyW = pygame.image.load( imgPath + "monster.png")
+imgEnemyD = pygame.image.load( imgPath + "monster_dead.png")
 imgEnemyAL = pygame.image.load( imgPath + "monster_s1.png")
 imgEnemyAR = pygame.image.load( imgPath + "monster_s5.png")
 #player
@@ -99,8 +100,15 @@ imgPlayerDeadL = pygame.image.load( imgPath + "hero_dead_l.png")
 imgPlayerDeadR = pygame.image.load( imgPath + "hero_dead_r.png")
 imgPlayerSR = pygame.image.load( imgPath + "hero_s0.png")
 imgPlayerSRA = pygame.image.load( imgPath + "hero_s1.png")
+imgPlayerAR = (pygame.image.load( imgPath + "hero_s2.png"),
+               pygame.image.load( imgPath + "hero_s3.png"), 
+               pygame.image.load( imgPath + "hero_s4.png"))
 imgPlayerSL = pygame.image.load( imgPath + "hero_s5.png")
 imgPlayerSLA = pygame.image.load( imgPath + "hero_s6.png")
+imgPlayerAL = (
+               pygame.image.load( imgPath + "hero_s7.png"), 
+               pygame.image.load( imgPath + "hero_s8.png"), 
+               pygame.image.load( imgPath + "hero_s9.png"))
 imgPlayer = imgPlayerR
 #stuff
 imgGold = pygame.image.load(imgPath + "gold_0.png")
@@ -145,14 +153,20 @@ armor = 0
 level = 0
 skill = 0.1     #initial skills
 hitChance = 40	#chance to hit of 100
+attack = (0, 1, 2, 1, 0)
+aframe = 0
 hasSword =  False
 hasSwordReady = False
 isAlive = True
 lookleft = True
+smoothMove = False
+attacks = False
+leftbubble = True
+attacktime = 0
+attacktimer = 80
 #envstatus
 enemyNear = False
-leftbubble = True
-smoothMove = False
+enemyDead  = False
 healthEmpty = False
 #calculate positions
 playerPos = [int(width_field/2), starty]
@@ -179,7 +193,8 @@ if randint(0, 100) < 40:
     healthPos = newPos(starty, fieldSize)
 #enemystatus
 lastDead = (-1,-1)
-killtime = 0
+killtime = -1
+bloodtime = -1
 killtimer = 2500
 #text/font
 #messagestuff
@@ -251,10 +266,23 @@ while run:
             imgEnemy = imgEnemyAL
     else:
         #guarding
-        imgEnemy = imgEnemyW             
+        imgEnemy = imgEnemyW
+    
+    if not time >  killtimer + killtime:        
+        screen.blit(imgEnemyD, (lastDead[0]*size,lastDead[1]*size))
+        bloodtime = time+killtime
+        
     screen.blit(imgEnemy, (enemyPos[0]*size, enemyPos[1]*size))
-     #blood
-    if not time >  killtimer + killtime:
+    
+    if enemyDead:            
+        sndEnemyDie.play()
+        pygame.time.delay(100)
+        enemyDead  = False
+        enemyPos = newPos(starty, fieldSize)
+        
+            
+    #blood
+    if not time >  killtimer + bloodtime and time > killtimer + killtime:        
         screen.blit(imgBlood, (lastDead[0]*size,lastDead[1]*size))
     #gold
     for x in goldPos:
@@ -323,16 +351,33 @@ while run:
     if not playerMove == playerPos:
         smoothMove = True		
         if playerMove[0] < playerPos[0]:
-            playerMove[0] += 1/float(size/2)
+            playerMove[0] += 1/float(size/4)
         elif playerMove[0] > playerPos[0]:
-            playerMove[0] -= 1/float(size/2)
+            playerMove[0] -= 1/float(size/4)
         if playerMove[1] < playerPos[1]:
-            playerMove[1] += 1/float(size/2)
+            playerMove[1] += 1/float(size/4)
         elif playerMove[1] > playerPos[1]:
-            playerMove[1] -= 1/float(size/2)
+            playerMove[1] -= 1/float(size/4)
         pygame.time.delay(2)
     else:
         smoothMove = False
+    if attacks:
+        if time > attacktime + attacktimer:
+            #nextframe
+            attacktime += attacktimer            
+            print aframe,  attack[aframe]
+            if aframe < 4:
+                aframe += 1
+            else:
+                aframe = 0
+                attacks = False
+        
+        if lookleft:
+            imgPlayer = imgPlayerAL[attack[aframe]]
+        else:
+            imgPlayer = imgPlayerAR[attack[aframe]]
+
+        
     #paint player
     screen.blit(imgPlayer, (playerMove[0]*size, playerMove[1]*size))
 
@@ -350,10 +395,12 @@ while run:
                 sndWalkGrass.play()                                
             elif event.key == pygame.K_LEFT and playerPos[0] > 0:
                 #left
-                playerMove[0] = playerPosOld[0] = playerPos[0]
-                playerPos[0] -= 1
-                sndWalkGrass.play()
-                lookleft  = True
+                if not lookleft:
+                    lookleft = True
+                else:
+                    playerMove[0] = playerPosOld[0] = playerPos[0]
+                    playerPos[0] -= 1
+                    sndWalkGrass.play()
             elif event.key == pygame.K_DOWN and playerPos[1] < height_field - 1:
                 #down
                 playerMove[1] = playerPosOld[1] = playerPos[1]
@@ -361,11 +408,13 @@ while run:
                 sndWalkGrass.play()                                
             elif event.key == pygame.K_RIGHT and playerPos[0] < width_field - 1:
                 #right
-                playerMove[0] = playerPos[0]
-                playerPosOld[0] = playerPos[0]				
-                playerPos[0] += 1
-                sndWalkGrass.play()
-                lookleft = False
+                if lookleft:
+                    lookleft  = False
+                else:
+                    playerMove[0] = playerPos[0]
+                    playerPosOld[0] = playerPos[0]				
+                    playerPos[0] += 1
+                    sndWalkGrass.play()
             elif event.key == pygame.K_i:
                 #inventar
                 print(inv)
@@ -376,17 +425,17 @@ while run:
                 say("Dropped!")
                 hasSword = False
             elif event.key == pygame.K_a and "Sword" in inv:
+                attacks = True
+                attacktime =  time
                 if enemyNear:
                     #hit or miss?
                     if randint(0, 100) < hitChance + skill:
                         sndSwordAHit.play()
-                        pygame.time.delay(300)
+                        enemyDead  = True
+                        killtime = time
                         lastDead = enemyPos
                         skill += 0.1
                         say("Die!")
-                        sndEnemyDie.play()
-                        killtime = time
-                        enemyPos = newPos(starty, fieldSize)
                     else:
                         sndSwordADef.play()
                         pygame.time.delay(300)
