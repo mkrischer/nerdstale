@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Project SYSTEM "Project-5.1.dtd">
+<!-- eric5 project file for project A Nerd's Tale -->
+<!-- Saved: 2012-09-13, 17:13:12 -->
+<!-- Copyright (C) 2012 Manuel Krischer, manuel.krischer@gmail.com -->
+<Project version="5.1">
+  <Language>en</Language>
+  <Hash>14480cbd485584a8501c1d16c7fecdebde314a86</Hash>
+  <ProgLanguage mixed="0">Python3</ProgLanguage>
+  <ProjectType>Qt4</ProjectType>
+  <Description>Simple RPG</Description>
+  <Version>0.1</Version>
+  <Author>Manuel Krischer</Author>
+  <Email>manuel.krischer@gmail.com</Email>
+  <Sources>
+    <Source>nerdstale.py</Source>
+    <Source>__init__.py</Source>
+    <Source>character.py</Source>
+    <Source>world.py</Source>
+    <Source>__main__.py</Source>
+    <Source>field.py</Source>
+    <Source>init.py</Source>
+    <Source>item.py</Source>
+  </Sources>
+  <Forms/>
+  <Translations/>
+  <Resources/>
+  <Interfaces/>
+  <Others/>
+  <MainScript>nerdstale.py</MainScript>
+  <Vcs>
+    <VcsType>None</VcsType>
+  </Vcs>
+  <FiletypeAssociations>
+    <FiletypeAssociation pattern="*.idl" type="INTERFACES"/>
+    <FiletypeAssociation pattern="*.ptl" type="SOURCES"/>
+    <FiletypeAssociation pattern="*.py" type="SOURCES"/>
+    <FiletypeAssociation pattern="*.pyw" type="SOURCES"/>
+    <FiletypeAssociation pattern="*.qm" type="TRANSLATIONS"/>
+    <FiletypeAssociation pattern="*.qrc" type="RESOURCES"/>
+    <FiletypeAssociation pattern="*.ts" type="TRANSLATIONS"/>
+    <FiletypeAssociation pattern="*.ui" type="FORMS"/>
+    <FiletypeAssociation pattern="*.ui.h" type="FORMS"/>
+  </FiletypeAssociations>
+</Project>

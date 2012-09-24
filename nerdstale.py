@@ -90,6 +90,7 @@ imgGrass = pygame.image.load( imgPath + "grass_0.png")
 imgForrest = pygame.image.load( imgPath + "forrest.png")
 #enemy
 imgEnemyW = pygame.image.load( imgPath + "monster.png")
+imgEnemyD = pygame.image.load( imgPath + "monster_dead.png")
 imgEnemyAL = pygame.image.load( imgPath + "monster_s1.png")
 imgEnemyAR = pygame.image.load( imgPath + "monster_s5.png")
 #player
@@ -99,8 +100,15 @@ imgPlayerDeadL = pygame.image.load( imgPath + "hero_dead_l.png")
 imgPlayerDeadR = pygame.image.load( imgPath + "hero_dead_r.png")
 imgPlayerSR = pygame.image.load( imgPath + "hero_s0.png")
 imgPlayerSRA = pygame.image.load( imgPath + "hero_s1.png")
+imgPlayerAR = (pygame.image.load( imgPath + "hero_s2.png"),
+               pygame.image.load( imgPath + "hero_s3.png"), 
+               pygame.image.load( imgPath + "hero_s4.png"))
 imgPlayerSL = pygame.image.load( imgPath + "hero_s5.png")
 imgPlayerSLA = pygame.image.load( imgPath + "hero_s6.png")
+imgPlayerAL = (
+               pygame.image.load( imgPath + "hero_s7.png"), 
+               pygame.image.load( imgPath + "hero_s8.png"), 
+               pygame.image.load( imgPath + "hero_s9.png"))
 imgPlayer = imgPlayerR
 #stuff
 imgGold = pygame.image.load(imgPath + "gold_0.png")
@@ -120,20 +128,20 @@ imgBubble = imgBubbleL
 pygame.mixer.init(frequency=48000, size=-16, channels=2, buffer=4096)
 #action sound
 sndEnemyDie = pygame.mixer.Sound(sndPath + "enemy_die.wav")                     #
-sndPlayerDie = pygame.mixer.Sound(sndPath + "player_die.wav")		            # 
-sndSwordAHit = pygame.mixer.Sound(sndPath + "sword_attack_hit.wav")	            # JoelAudio		cc Attribution License
-sndSwordPull = pygame.mixer.Sound(sndPath + "sword_pull.wav")		            # jobro			cc Attribution License
-sndSwordADef = pygame.mixer.Sound(sndPath + "sword_attack_def.wav")	            # Erdie			cc Attribution License
-sndClubAMiss = pygame.mixer.Sound(sndPath + "enemy_attack_club_miss.wav")       # smokebomb99		cc 0 License
-sndClubAHit  = pygame.mixer.Sound(sndPath + "enemy_attack_club_hit.wav")        # Rock Savage		cc sampling+license
-sndSwordAMiss = pygame.mixer.Sound(sndPath + "sword_attack_miss.wav")	        # qubodup		cc 0 License
-sndSwordPush = pygame.mixer.Sound(sndPath + "sword_push.wav")		            # jobro 		cc Attribution License
-sndWalkGrass = pygame.mixer.Sound(sndPath + "walk_grass.wav")	            	# bevangoldswain	cc sampling+license
-sndGoldAdd = pygame.mixer.Sound(sndPath + "gold_add.wav")		                # dobroide		cc Attribution License.
-sndFoundItem = pygame.mixer.Sound(sndPath + "found_item.wav")	            	# Kastenfrosch		cc 0 License
-sndDrink = pygame.mixer.Sound(sndPath + "drink.wav")			                # sagetyrtle		cc 0 License
+sndPlayerDie = pygame.mixer.Sound(sndPath + "player_die.wav")                   # 
+sndSwordAHit = pygame.mixer.Sound(sndPath + "sword_attack_hit.wav")             # JoelAudio     cc Attribution License
+sndSwordPull = pygame.mixer.Sound(sndPath + "sword_pull.wav")                   # jobro         cc Attribution License
+sndSwordADef = pygame.mixer.Sound(sndPath + "sword_attack_def.wav")             # Erdie         cc Attribution License
+sndClubAMiss = pygame.mixer.Sound(sndPath + "enemy_attack_club_miss.wav")       # smokebomb99       cc 0 License
+sndClubAHit  = pygame.mixer.Sound(sndPath + "enemy_attack_club_hit.wav")        # Rock Savage       cc sampling+license
+sndSwordAMiss = pygame.mixer.Sound(sndPath + "sword_attack_miss.wav")           # qubodup       cc 0 License
+sndSwordPush = pygame.mixer.Sound(sndPath + "sword_push.wav")                   # jobro         cc Attribution License
+sndWalkGrass = pygame.mixer.Sound(sndPath + "walk_grass.wav")                   # bevangoldswain    cc sampling+license
+sndGoldAdd = pygame.mixer.Sound(sndPath + "gold_add.wav")                       # dobroide      cc Attribution License.
+sndFoundItem = pygame.mixer.Sound(sndPath + "found_item.wav")                   # Kastenfrosch      cc 0 License
+sndDrink = pygame.mixer.Sound(sndPath + "drink.wav")                            # sagetyrtle        cc 0 License
 #ambience sound
-pygame.mixer.music.load(musPath + "amb_outdoor.wav")		                    # tsemilagain		cc sampling+license
+pygame.mixer.music.load(musPath + "amb_outdoor.wav")                            # tsemilagain       cc sampling+license
 pygame.mixer.music.play(-1)
 #snd manipulation
 sndWalkGrass.set_volume(0.1)
@@ -144,15 +152,21 @@ gold = 0
 armor = 0
 level = 0
 skill = 0.1     #initial skills
-hitChance = 40	#chance to hit of 100
+hitChance = 40  #chance to hit of 100
+attack = (0, 1, 2, 1, 0)
+aframe = 0
 hasSword =  False
 hasSwordReady = False
 isAlive = True
 lookleft = True
+smoothMove = False
+attacks = False
+leftbubble = True
+attacktime = 0
+attacktimer = 80
 #envstatus
 enemyNear = False
-leftbubble = True
-smoothMove = False
+enemyDead  = False
 healthEmpty = False
 #calculate positions
 playerPos = [int(width_field/2), starty]
@@ -180,6 +194,7 @@ if randint(0, 100) < 40:
 #enemystatus
 lastDead = (-1,-1)
 killtime = 0
+bloodtime = 0
 killtimer = 2500
 #text/font
 #messagestuff
@@ -214,11 +229,11 @@ while run:
     st_pos_txt = str(playerPos[0]) + ", " + str(playerPos[1])
     # render status text
     st_energy = statusfont.render(st_energy_txt, True, (200,200,0))
-    st_armor  = statusfont.render(st_armor_txt, True, (200,200,0))	
-    st_gold   = statusfont.render(st_gold_txt, True, (200,200,0))	
+    st_armor  = statusfont.render(st_armor_txt, True, (200,200,0))  
+    st_gold   = statusfont.render(st_gold_txt, True, (200,200,0))   
     st_skill  = statusfont.render(st_skill_txt, True, (200,200,0))
     st_day    = statusfont.render(st_day_txt, True, (200,200,0))
-    st_pos    = statusfont.render(st_pos_txt, True, (200,200,0))	
+    st_pos    = statusfont.render(st_pos_txt, True, (200,200,0))    
     #paint world
     screen.blit(imgStatusbar, (0,0))
     screen.blit(st_energy, (125, 15))
@@ -229,7 +244,7 @@ while run:
     screen.blit(st_gold, (810, 40))
     #blit floor
     for x in range(0, width_field + 1):
-        starty = 1		
+        starty = 1      
         if scale < 2:
             starty += (2-scale)
         for y in range(starty, height_field + 1):
@@ -251,10 +266,24 @@ while run:
             imgEnemy = imgEnemyAL
     else:
         #guarding
-        imgEnemy = imgEnemyW             
-    screen.blit(imgEnemy, (enemyPos[0]*size, enemyPos[1]*size))
-     #blood
+        imgEnemy = imgEnemyW
+    
     if not time >  killtimer + killtime:
+        imgEnemy = imgEnemyD
+        bloodtime = time
+    screen.blit(imgEnemy, (enemyPos[0]*size, enemyPos[1]*size))
+    
+    if enemyDead:            
+        sndEnemyDie.play()
+        pygame.time.delay(1000)
+        enemyPos = newPos(starty, fieldSize)
+        enemyDead  = False
+        
+        
+    
+    
+    #blood
+    if not time >  killtimer + bloodtime:        
         screen.blit(imgBlood, (lastDead[0]*size,lastDead[1]*size))
     #gold
     for x in goldPos:
@@ -321,7 +350,7 @@ while run:
         pygame.time.delay(2000)
         run = False
     if not playerMove == playerPos:
-        smoothMove = True		
+        smoothMove = True       
         if playerMove[0] < playerPos[0]:
             playerMove[0] += 1/float(size/2)
         elif playerMove[0] > playerPos[0]:
@@ -333,6 +362,23 @@ while run:
         pygame.time.delay(2)
     else:
         smoothMove = False
+    if attacks:
+        if time > attacktime + attacktimer:
+            #nextframe
+            attacktime += attacktimer            
+            print aframe,  attack[aframe]
+            if aframe < 4:
+                aframe += 1
+            else:
+                aframe = 0
+                attacks = False
+        
+        if lookleft:
+            imgPlayer = imgPlayerAL[attack[aframe]]
+        else:
+            imgPlayer = imgPlayerAR[attack[aframe]]
+
+        
     #paint player
     screen.blit(imgPlayer, (playerMove[0]*size, playerMove[1]*size))
 
@@ -362,7 +408,7 @@ while run:
             elif event.key == pygame.K_RIGHT and playerPos[0] < width_field - 1:
                 #right
                 playerMove[0] = playerPos[0]
-                playerPosOld[0] = playerPos[0]				
+                playerPosOld[0] = playerPos[0]              
                 playerPos[0] += 1
                 sndWalkGrass.play()
                 lookleft = False
@@ -376,17 +422,17 @@ while run:
                 say("Dropped!")
                 hasSword = False
             elif event.key == pygame.K_a and "Sword" in inv:
+                attacks = True
+                attacktime =  time
                 if enemyNear:
                     #hit or miss?
                     if randint(0, 100) < hitChance + skill:
                         sndSwordAHit.play()
-                        pygame.time.delay(300)
+                        enemyDead  = True
+                        killtime = time
                         lastDead = enemyPos
                         skill += 0.1
                         say("Die!")
-                        sndEnemyDie.play()
-                        killtime = time
-                        enemyPos = newPos(starty, fieldSize)
                     else:
                         sndSwordADef.play()
                         pygame.time.delay(300)
